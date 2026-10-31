@@ -8,7 +8,7 @@ Stremio addon that shows my Letterboxd watchlist and diary as movie catalogs and
 - `npm test` : run tests (parsers, sync logic)
 - `npm run stremio:login` : save a Stremio auth key into `.env` without printing it
 - `DRY_RUN=true npm start` : sync logs what it would add to Letterboxd without writing anything
-- Manual endpoints: `/sync`, `/refresh`, `/export.csv`, `POST /export/imported`
+- Manual endpoints: `/sync`, `/refresh`, `/export.csv`, `POST /export/imported`, `/pending.json`, `/letterboxd-stremio.user.js`
 
 ## Stack
 - Node.js 20+, `stremio-addon-sdk`, `express`, `dotenv`. No HTML/XML parser dependency: parsers are small regex functions with tests.
@@ -18,12 +18,13 @@ Stremio addon that shows my Letterboxd watchlist and diary as movie catalogs and
 - `src/providers/letterboxd.js` : list provider (`getList(name)`); reads public pages only
 - `src/letterboxd/parse.js` : pure parsers for RSS, watchlist grid and film pages
 - `src/mapping/films.js` : Letterboxd slug -> IMDb/TMDB ids, cached in `data/film-ids.json`
-- `src/sync/` : Stremio library polling, watch detection (`progress.js`), CSV writer
+- `src/sync/` : Stremio library polling, watch detection (`progress.js`), queue of watches to log (`queue.js`), CSV export
+- `userscript/` : Tampermonkey script that logs queued watches from the user's logged-in browser
 - `src/cache/` : TTL cache
 - `data/` : film id cache, sync state, pending import CSV. **Gitignored**
 
 ## Rules (important)
-1. **Never write to my real Letterboxd account without a dry run first.** Ask before the first real write. Today "write" means the import CSV I upload myself; any automatic write route needs my explicit go-ahead.
+1. **Never write to my real Letterboxd account without a dry run first.** Ask before the first real write. Writes happen only from my own logged-in browser (userscript, confirms each entry by default) or a CSV I upload. Never try to get past Letterboxd's Cloudflare check from the server.
 2. **Never create duplicate diary entries.** A viewing is exported once. Stored watch counts never go down.
 3. **Never log or print secrets** (Stremio auth key, any Letterboxd credentials). Secrets live in `.env` or `data/`, both gitignored. Keep `.env.example` updated with empty values.
 4. **Don't assume API or markup details, verify them.** Letterboxd markup and Stremio's API change. Check current behaviour and tell me if something differs.

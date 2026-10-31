@@ -4,6 +4,9 @@ const config = require('./config');
 const letterboxd = require('./providers/letterboxd');
 const sync = require('./sync');
 const writer = require('./sync/writer');
+const queue = require('./sync/queue');
+const fs = require('fs');
+const path = require('path');
 
 const PAGE = 100;
 const manifest = {
@@ -56,12 +59,25 @@ app.get('/refresh', admin, (req, res) => { letterboxd.clearCache(); res.json({ o
 app.get('/sync', admin, async (req, res) => {
   try { res.json(await sync.runSync()); } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
+// Pending watches as a Letterboxd import CSV. After importing it on Letterboxd, POST /export/imported.
 app.get('/export.csv', admin, (req, res) => {
-  const f = writer.pendingPath();
-  if (!f) return res.status(404).send('Nothing to import yet.');
-  res.download(f, 'letterboxd-import.csv');
+  const entries = queue.pending();
+  if (!entries.length) return res.status(404).send('Nothing to import yet.');
+  res.attachment('letterboxd-import.csv').type('text/csv').send(writer.toCsv(entries));
 });
-app.post('/export/imported', admin, (req, res) => res.json({ ok: true, archivedAs: writer.markImported() }));
+app.post('/export/imported', admin, (req, res) => {
+  res.json({ ok: true, marked: queue.markDone(queue.pending().map(e => e.id), 'csv') });
+});
+
+// Used by the browser userscript.
+app.get('/pending.json', admin, (req, res) => res.json({ username: config.username, entries: queue.pending() }));
+app.post('/pending/:id/done', admin, (req, res) => res.json({ ok: true, marked: queue.markDone([req.params.id], 'userscript') }));
+app.get('/letterboxd-stremio.user.js', admin, (req, res) => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'userscript', 'letterboxd-stremio.user.js'), 'utf8')
+    .replace("const ADDON_URL = 'http://localhost:7001';", `const ADDON_URL = ${JSON.stringify(`${req.protocol}://${req.get('host')}`)};`)
+    .replace("const ADMIN_TOKEN = '';", `const ADMIN_TOKEN = ${JSON.stringify(config.adminToken ? String(req.query.token || '') : '')};`);
+  res.type('application/javascript').send(src);
+});
 app.use(getRouter(builder.getInterface()));
 
 if (require.main === module) {

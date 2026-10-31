@@ -1,11 +1,10 @@
-// Letterboxd has no write API for personal projects, so "writing" means appending diary rows to a
-// CSV in Letterboxd's import format (letterboxd.com/about/importing-data/). You upload it at
-// https://letterboxd.com/import/ . In DRY_RUN the rows are only logged.
-const fs = require('fs');
-const path = require('path');
-const { file } = require('../store');
+// Letterboxd has no write API for personal projects. New watches go into a local queue
+// (src/sync/queue.js). From there they reach Letterboxd in one of two ways:
+//   1. the userscript (userscript/letterboxd-stremio.user.js) logs them while you browse letterboxd.com
+//   2. /export.csv gives them as a file in Letterboxd's import format for letterboxd.com/import/
+// In DRY_RUN they are only logged.
+const queue = require('./queue');
 
-const PENDING = 'letterboxd-import.csv';
 const HEADER = 'imdbID,Title,Year,WatchedDate,Rewatch\n';
 
 function csvField(v) {
@@ -15,27 +14,13 @@ function csvField(v) {
 function toRow(e) {
   return [e.imdb, e.title || e.name, e.year || '', e.watchedDate, e.rewatch ? 'true' : 'false'].map(csvField).join(',') + '\n';
 }
+function toCsv(entries) { return HEADER + entries.map(toRow).join(''); }
 
 function write(events, { dryRun }) {
   for (const e of events) {
-    console.log(`[sync]${dryRun ? ' DRY RUN, would log' : ' queued'}: ${e.title || e.name} (${e.imdb}) watched ${e.watchedDate}${e.rewatch ? ' (rewatch)' : ''}`);
+    console.log(`[sync]${dryRun ? ' DRY RUN, would queue' : ' queued'}: ${e.title || e.name} (${e.imdb}) watched ${e.watchedDate}${e.rewatch ? ' (rewatch)' : ''}`);
   }
-  if (dryRun || !events.length) return;
-  const f = file(PENDING);
-  fs.mkdirSync(path.dirname(f), { recursive: true });
-  if (!fs.existsSync(f)) fs.writeFileSync(f, HEADER);
-  fs.appendFileSync(f, events.map(toRow).join(''));
+  if (!dryRun && events.length) queue.add(events);
 }
 
-function pendingPath() { const f = file(PENDING); return fs.existsSync(f) ? f : null; }
-
-// After you've imported the file on Letterboxd: archive it so the next export starts empty.
-function markImported() {
-  const f = pendingPath();
-  if (!f) return null;
-  const dest = file(`imported-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`);
-  fs.renameSync(f, dest);
-  return path.basename(dest);
-}
-
-module.exports = { write, toRow, pendingPath, markImported, HEADER };
+module.exports = { write, toRow, toCsv, HEADER };
