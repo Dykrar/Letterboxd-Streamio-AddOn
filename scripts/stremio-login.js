@@ -21,6 +21,6 @@ function ask(q, hidden) {
   const envPath = path.join(__dirname, '..', '.env');
   let env = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : fs.readFileSync(path.join(__dirname, '..', '.env.example'), 'utf8');
   env = /^STREMIO_AUTH_KEY=.*$/m.test(env) ? env.replace(/^STREMIO_AUTH_KEY=.*$/m, `STREMIO_AUTH_KEY=${key}`) : env + `\nSTREMIO_AUTH_KEY=${key}\n`;
-  fs.writeFileSync(envPath, env);
+  fs.writeFileSync(envPath, env, { mode: 0o600 });
   console.log('Saved STREMIO_AUTH_KEY to .env (not shown). Restart the addon.');
 })().catch(e => { console.error(e.message); process.exit(1); });
