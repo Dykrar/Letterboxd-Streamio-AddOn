@@ -30,11 +30,15 @@ Your profile, watchlist and diary must be **public** for the catalogs to work.
 
 Port 7001 is the default so this can run next to the MAL addon on 7000.
 
-### Start automatically with Windows
+### Start it together with Stremio (Windows)
 
-`scripts\start-hidden.vbs` runs the addon with no window and logs to `data\addon.log`. To start it at login, put a
-shortcut to that file in your Startup folder (Win+R, `shell:startup`). To stop it, end the `node.exe` that is listening
-on port 7001 in Task Manager. Stremio only shows the catalogs while the addon is running, and only on this PC.
+`scripts\stremio-with-addon.vbs` starts the addon with no window, opens Stremio, and stops the addon once Stremio is
+closed. Point your Stremio shortcut at it: target `wscript.exe "C:\...\letterboxd-stremio-addon\scripts\stremio-with-addon.vbs"`.
+If Stremio isn't in a usual install folder, put its .exe path in `STREMIO_EXE` at the top of the script. Opening Stremio
+some other way (for example its own taskbar pin) won't start the addon. Output goes to `data\addon.log`.
+
+`scripts\start-hidden.vbs` just starts the addon with no window, if you'd rather keep it always running (put a shortcut
+to it in `shell:startup`).
 
 ## Install in Stremio
 
