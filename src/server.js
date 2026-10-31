@@ -57,6 +57,7 @@ function admin(req, res, next) {
 app.get('/', (req, res) => res.redirect('/manifest.json'));
 app.get('/refresh', admin, (req, res) => { letterboxd.clearCache(); res.json({ ok: true, cleared: 'catalog cache' }); });
 app.get('/sync', admin, async (req, res) => {
+  if (!config.syncEnabled) return res.json({ ok: false, error: 'Sync is off. Set SYNC_ENABLED=true in .env to turn it on.' });
   try { res.json(await sync.runSync()); } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 // Pending watches as a Letterboxd import CSV. After importing it on Letterboxd, POST /export/imported.

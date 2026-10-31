@@ -60,6 +60,7 @@ async function runSync() {
 }
 
 function start() {
+  if (!config.syncEnabled) { console.log('[sync] off (SYNC_ENABLED=false): catalogs only.'); return; }
   if (!config.stremioAuthKey) { console.log('[sync] STREMIO_AUTH_KEY not set, sync disabled.'); return; }
   const every = Math.max(1, config.syncIntervalMinutes) * 60 * 1000;
   const tick = () => runSync().catch(e => console.warn(`[sync] failed: ${e.message}`));

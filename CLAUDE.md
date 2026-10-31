@@ -32,6 +32,7 @@ Stremio addon that shows my Letterboxd watchlist and diary as movie catalogs and
 6. Don't add dependencies without a reason. Say why if you do.
 
 ## Conventions
+- Sync is opt-in (`SYNC_ENABLED`, default false). Diogo chose catalogs only on 2026-10-31.
 - Catalog ids are IMDb `tt` ids so Cinemeta and stream addons work. No meta handler.
 - An entry counts as watched at >= `WATCHED_THRESHOLD` (default 0.85), on Stremio's watched flag, or when Stremio counts a full watch.
 - Write tests for the parsers and the sync logic before changing them.

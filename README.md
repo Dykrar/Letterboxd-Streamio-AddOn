@@ -23,7 +23,7 @@ Your profile, watchlist and diary must be **public** for the catalogs to work.
 1. Node.js 20 or newer.
 2. `npm install`
 3. `cp .env.example .env` (Windows: `copy .env.example .env`) and set `LETTERBOXD_USERNAME` and `TZ` (for example `Europe/Lisbon`).
-4. Stremio auth key: run `npm run stremio:login`. It asks for your Stremio email and password, sends them only to
+4. Only if you want sync: Stremio auth key: run `npm run stremio:login`. It asks for your Stremio email and password, sends them only to
    `api.strem.io`, and writes the key into `.env` without printing it. If you already have the key from the MAL addon, paste
    the same value into `STREMIO_AUTH_KEY`.
 5. `npm start`, then open `http://localhost:7001/manifest.json` to check it runs.
@@ -35,7 +35,11 @@ Port 7001 is the default so this can run next to the MAL addon on 7000.
 Stremio > Addons > paste `http://localhost:7001/manifest.json` into the search box > Install. The two catalogs
 appear on the Board and under Discover > Movies.
 
-## How sync works
+## How sync works (optional)
+
+Sync is **off by default** (`SYNC_ENABLED=false`): the addon then only shows your lists and needs no Stremio key.
+Set `SYNC_ENABLED=true` and a `STREMIO_AUTH_KEY` to turn it on.
+
 
 Every `SYNC_INTERVAL_MINUTES` (and on `GET /sync`):
 
