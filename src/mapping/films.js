@@ -9,6 +9,10 @@ const RETRY_FAILED_MS = 24 * 3600 * 1000;
 let db = null;
 let dirty = false;
 const inflight = new Map();
+// Letterboxd sits behind Cloudflare. A burst of film page requests gets this IP challenged (HTTP 403)
+// for a while, so on 403/429 we stop fetching film pages for COOLDOWN_MS and serve what is cached.
+const COOLDOWN_MS = 30 * 60 * 1000;
+let cooldownUntil = 0;
 
 function load() { if (!db) db = readJson(FILE, {}); return db; }
 function save() { if (dirty) { writeJson(FILE, db); dirty = false; } }
@@ -23,6 +27,7 @@ function cached(slug) {
 async function resolve(slug) {
   const hit = cached(slug);
   if (hit) return hit.failedAt ? null : hit;
+  if (Date.now() < cooldownUntil) return null;
   if (inflight.has(slug)) return inflight.get(slug);
   const p = (async () => {
     try {
@@ -31,6 +36,11 @@ async function resolve(slug) {
       dirty = true;
       return info.imdb ? load()[slug] : null;
     } catch (e) {
+      if (e.status === 403 || e.status === 429) {
+        if (Date.now() >= cooldownUntil) console.warn(`[mapping] Letterboxd answered ${e.status} (rate limit or Cloudflare challenge). Pausing film lookups for ${COOLDOWN_MS / 60000} min.`);
+        cooldownUntil = Date.now() + COOLDOWN_MS;
+        return null;
+      }
       console.warn(`[mapping] could not read film page for ${slug}: ${e.message}`);
       if (e.status === 404) { load()[slug] = { slug, failedAt: Date.now() }; dirty = true; }
       return null;
@@ -40,18 +50,24 @@ async function resolve(slug) {
   return p;
 }
 
-// Resolve many slugs with small concurrency; keeps input order, drops films with no IMDb id.
-async function resolveMany(slugs, concurrency = 3) {
+// Resolve slugs one at a time (the http pacer spaces requests out). Returns once all are done or
+// budgetMs has passed, with the films resolved so far in input order; the rest keep resolving in the
+// background, so the next catalog load (or /refresh) shows them. Films with no IMDb id are dropped.
+function resolveMany(slugs, { budgetMs = Infinity } = {}) {
   const out = new Array(slugs.length);
-  let i = 0;
-  await Promise.all(Array.from({ length: concurrency }, async () => {
-    while (i < slugs.length) { const k = i++; out[k] = await resolve(slugs[k]); }
-  }));
-  save();
-  return out.filter(Boolean);
+  const work = (async () => {
+    for (let k = 0; k < slugs.length; k++) {
+      out[k] = await resolve(slugs[k]);
+      if (k % 10 === 9) save();
+    }
+    save();
+  })();
+  const snapshot = () => out.filter(Boolean);
+  if (!Number.isFinite(budgetMs)) return work.then(snapshot);
+  return Promise.race([work, new Promise(r => setTimeout(r, budgetMs).unref())]).then(snapshot);
 }
 
 // Reverse lookups for the sync (IMDb id -> slug), from what we have already cached.
 function byImdb(imdb) { return Object.values(load()).find(e => e.imdb === imdb) || null; }
 
-module.exports = { resolve, resolveMany, byImdb, _reset: () => { db = {}; dirty = false; } };
+module.exports = { resolve, resolveMany, byImdb, _reset: () => { db = {}; dirty = false; cooldownUntil = 0; } };

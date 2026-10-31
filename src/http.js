@@ -1,11 +1,11 @@
 // fetch with a polite pace, timeout and backoff on 429/5xx. Never logs request bodies (they may hold secrets).
 const UA = 'letterboxd-stremio-addon/0.1 (personal use)';
-const MIN_GAP_MS = Number(process.env.HTTP_MIN_GAP_MS || 400);
+const MIN_GAP_MS = Number(process.env.HTTP_MIN_GAP_MS || 1000);
 let last = 0;
 let chain = Promise.resolve();
 
 function pace() {
-  // Serialise request starts so we never exceed ~2.5 req/s to any site.
+  // Serialise request starts so we never exceed ~1 req/s (Letterboxd's Cloudflare challenges bursts).
   chain = chain.then(async () => {
     const wait = last + MIN_GAP_MS - Date.now();
     if (wait > 0) await new Promise(r => setTimeout(r, wait));

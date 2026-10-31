@@ -72,12 +72,14 @@ down, already-logged films, timezones, CSV format).
 
 ## Known limitations
 
-- **Watching does not reach Letterboxd by itself.** You upload the CSV. Fully automatic writes need either an approved
-  Letterboxd API key or logging in to the website with your password and posting its internal forms, which is unofficial
-  and can break or get the account flagged. Not built.
+- **Watching does not reach Letterboxd by itself.** You upload the CSV. Automatic writes were tried on 2026-10-31:
+  Letterboxd's sign-in page sits behind a Cloudflare challenge that a script can't pass (HTTP 403 "Just a moment"),
+  and getting around it isn't something this addon does. Automatic writes need an approved Letterboxd API key.
 - **Recently watched** shows only what the RSS feed carries (about the last 50 diary entries).
-- The first watchlist load reads one film page per film (about 100 per catalog page, cached forever after), so the first
-  open of a large watchlist takes a while.
+- The first watchlist load reads one film page per film, about one per second, cached forever after. Stremio gets
+  whatever is ready within 8 seconds and the rest fill in on later loads.
+- Letterboxd is behind Cloudflare. Too many requests in a burst get your IP challenged (HTTP 403) for a while. The addon
+  then pauses film lookups for 30 minutes and serves what it has cached.
 - Films with no IMDb link on Letterboxd are left out of the catalogs. TV entries on Letterboxd are left out too.
 - Watchlist and film page markup has not been checked against live HTML yet. The parser accepts several attribute names
   (`data-film-slug`, `data-item-slug`, `data-target-link`, `data-item-link`). If the Watchlist catalog is empty while the

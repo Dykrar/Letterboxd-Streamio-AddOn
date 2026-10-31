@@ -52,8 +52,10 @@ function parseFilmPage(html) {
   let title = og, year = null;
   const ym = og.match(/^(.*)\s\((\d{4})\)$/);
   if (ym) { title = ym[1]; year = Number(ym[2]); }
+  // Letterboxd's internal numeric id (verified 2026-10-31: data-production-uid="film:51469" and "uid":"film:51469").
+  const filmId = (html.match(/data-production-uid="film:(\d+)"/) || html.match(/"uid"\s*:\s*"film:(\d+)"/) || html.match(/data-film-id="(\d+)"/) || [])[1] || null;
   const poster = decode((html.match(/<meta property="og:image" content="([^"]*)"/) || [])[1] || '') || null;
-  return { imdb, tmdb: tmdb ? Number(tmdb) : null, tmdbType, title: title || null, year, poster };
+  return { imdb, tmdb: tmdb ? Number(tmdb) : null, tmdbType, title: title || null, year, poster, filmId };
 }
 
 function tag(block, name) {
@@ -89,4 +91,9 @@ function parseRss(xml) {
   return items;
 }
 
-module.exports = { decode, slugFrom, parseFilmGrid, parseLastPage, parseFilmPage, parseRss };
+// Hidden CSRF token in any Letterboxd page (also sent as the com.xk72.webparts.csrf cookie).
+function parseCsrf(html) {
+  return (html.match(/name="__csrf"\s+value="([^"]+)"/) || html.match(/supermodelCSRF\s*=\s*'([^']+)'/) || [])[1] || null;
+}
+
+module.exports = { parseCsrf, decode, slugFrom, parseFilmGrid, parseLastPage, parseFilmPage, parseRss };

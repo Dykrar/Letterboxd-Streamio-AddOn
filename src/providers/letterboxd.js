@@ -11,6 +11,8 @@ const config = require('../config');
 
 const cache = new TtlCache(config.listCacheMinutes * 60 * 1000);
 const MAX_PAGES = 60;
+// Stremio gives up on slow catalogs, so answer within this time with what is resolved so far.
+const CATALOG_BUDGET_MS = 8000;
 
 function base() {
   if (!config.username) throw new Error('LETTERBOXD_USERNAME is not set');
@@ -43,7 +45,7 @@ async function getList(name, { skip = 0, limit = 100 } = {}) {
   else if (name === 'diary') slugs = [...new Set((await diaryEntries()).map(e => e.slug).filter(Boolean))];
   else throw new Error(`Unknown list ${name}`);
   // Only resolve the page Stremio asked for, so a 600-film watchlist doesn't trigger 600 lookups at once.
-  const out = await films.resolveMany(slugs.slice(skip, skip + limit));
+  const out = await films.resolveMany(slugs.slice(skip, skip + limit), { budgetMs: CATALOG_BUDGET_MS });
   return out.filter(f => f.tmdbType !== 'tv'); // catalogs are type movie; Letterboxd also lists some TV
 }
 
