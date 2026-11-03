@@ -33,7 +33,7 @@ Port 7001 is the default so this can run next to the MAL addon on 7000.
 ### Start it together with Stremio (Windows)
 
 `scripts\stremio-with-addon.vbs` starts the addon (and the MAL addon, if it is in `..\mal-stremio-addon`) with no
-window, opens Stremio, and stops the addons it started once Stremio is closed. Point your Stremio shortcut at it: target `wscript.exe "C:\...\letterboxd-stremio-addon\scripts\stremio-with-addon.vbs"`.
+window, opens Stremio, and stops the addons it started once Stremio is closed. If Stremio is already open (also when it's hidden in the tray), it brings the window to the front instead. Point your Stremio shortcut at it: target `wscript.exe "C:\...\letterboxd-stremio-addon\scripts\stremio-with-addon.vbs"`.
 If Stremio isn't in a usual install folder, put its .exe path in `STREMIO_EXE` at the top of the script. Opening Stremio
 some other way (for example its own taskbar pin) won't start the addon. Output goes to `data\addon.log`.
 
