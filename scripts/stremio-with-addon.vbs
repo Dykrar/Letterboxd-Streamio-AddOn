@@ -54,8 +54,26 @@ For i = 0 To UBound(servers)
 Next
 WScript.Sleep 2000
 
-' 2. Open Stremio (unless it is already open).
-If Not StremioRunning() Then
+Function StremioPid()
+  Dim procs, q
+  StremioPid = 0
+  ' The window belongs to the shell, not to stremio-runtime.exe (its streaming server).
+  Set procs = wmi.ExecQuery("SELECT * FROM Win32_Process WHERE Name = 'stremio.exe' OR Name = 'stremio-shell-ng.exe'")
+  For Each q In procs
+    StremioPid = q.ProcessId : Exit Function
+  Next
+End Function
+
+' 2. Open Stremio. If it is already open (maybe hidden in the tray), bring its window to the front.
+If StremioRunning() Then
+  If Not sh.AppActivate(StremioPid()) Then
+    ' Window hidden in the tray: launching the exe again shows the running instance (Stremio is single-instance).
+    exe = FindStremio()
+    If exe <> "" Then sh.Run """" & exe & """", 1, False
+  End If
+  ' Another copy of this script is already waiting on that Stremio; only stay if this run started an addon.
+  If Not (started(0) Or started(1)) Then WScript.Quit 0
+Else
   exe = FindStremio()
   If exe = "" Then
     MsgBox "Couldn't find Stremio. Put the path to its .exe in STREMIO_EXE at the top of " & WScript.ScriptFullName, 48, "Stremio addons"
